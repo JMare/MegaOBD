@@ -77,7 +77,7 @@ void setup() {
   Serial.println("SPD timer initializing - going to void loop()");
   
   //int rpmevent = t.every(250,rpm_calc);
-  int spdevent = t.every(250,speedpull);
+  int spdevent = t.every(2000,speedpull);
  
 }
 
@@ -95,9 +95,9 @@ void loop() {
   lcd.print("   ");
   lcd.setCursor(8,1);
   lcd.print(spdk);
-    Serial.print("RPM IS:");
-   Serial.print(rpm);
-  Serial.println();
+    //Serial.print("RPM IS:");
+  // Serial.print(rpm);
+  //Serial.println();
   delay(100);
   t.update();
   
@@ -280,7 +280,7 @@ void speedpull()
   char recvChar;
   char bufin[15];
   int i;
-  
+  Serial.println("Startingspeedpull");
  // if (!(obdabort)) //if no obd error
  // {
 
@@ -290,24 +290,29 @@ void speedpull()
     btSerial.print("\r"); //carriage return
     while (btSerial.available() <= 0); // wait while no data
     i = 0;
-    while ((btSerial.available()>0) && (!prompt)); //if data is coming
+    while ((btSerial.available()>0) && (i<=12)) //if data is coming
     {
       recvChar = btSerial.read(); //read from elm
-      if ((i<11) && (!(recvChar==32))) //take no more than 15 chars and ignore space
+      if ((i<=12)&&(!(recvChar==32))) //take no more than 15 chars and ignore space
       {
         bufin[i]=recvChar; //store char in the array
         i=i+1; //increment the counter
+        Serial.print(recvChar);
       }
-      if (recvChar==62) prompt=true; //once a > comes back stop reading data
+      //if (recvChar==62) prompt=true; //once a > comes back stop reading data
     }
+    Serial.println();
+    Serial.println(bufin);
     
-    if ((bufin[6]=='4') && (bufin[7]=='1') && (bufin[8]=='0') && (bufin[9]=='D')) // check if we have a valid speed repsonse
+    if ((bufin[0]=='0') && (bufin[1]=='1') && (bufin[2]=='0') && (bufin[3]=='D')) // check if we have a valid speed repsonse
     {
       valid=true; 
+      Serial.println("valid data received");
     }
     else
     {
       valid=false;
+      Serial.println("invalid data received");
     }
     
     if (valid)
@@ -318,7 +323,7 @@ void speedpull()
       
       spdk=0;
       
-      char hexspeed[ ] = { bufin[10] , bufin[11] };
+      char hexspeed[ ] = { bufin[4] , bufin[5] };
       int spddisp = (int) strtol(hexspeed, NULL, 16);
       
       spdk = spddisp;
@@ -345,13 +350,14 @@ void rpm_calc(){
 
      valid=false;
      prompt=false;
-     btSerial.print("010C1");                        //send to OBD PID command 010C is for RPM, the last 1 is for ELM to wait just for 1 respond (see ELM datasheet)
+     btSerial.print("010C1");                        
      btSerial.print("\r");                           //send to OBD cariage return char
      while (btSerial.available() <= 0);              //wait while no data from ELM
      i=0;
-     while ((btSerial.available()>0) && (!prompt)){  //if there is data from ELM and prompt is false
+     while ((btSerial.available()>0) && (!prompt))
+     {  //if there is data from ELM and prompt is false
        recvChar = btSerial.read();                   //read from ELM
-       if ((i<13)&&(!(recvChar==32))) {                     //the normal respond to previus command is 010C1/r41 0C ?? ??>, so count 15 chars and ignore char 32 which is space
+       if ((i<13)&&(!(recvChar==32))) {                     
          bufin[i]=recvChar;                                 //put received char in bufin array
          i=i+1;                                             //increase i
        }  
@@ -359,18 +365,14 @@ void rpm_calc(){
      }
 
     if ((bufin[6]=='4') && (bufin[7]=='1') && (bufin[8]=='0') && (bufin[9]=='C')){ //if first four chars after our command is 410C
-      valid=true;                                                                  //then we have a correct RPM response
+      valid=true;                                                                  //corr response
     } else {
       valid=false;                                                                 //else we dont
     }
-    if (valid){                                                                    //in case of correct RPM response
-      rpm_retries=0;                                                               //reset to 0 retries
+    if (valid){                                                                    
+      rpm_retries=0;                                                               
       rpmabort=false;                                                        //set rpm error flag to false
       
-     //start calculation of real RPM value
-     //RPM is coming from OBD in two 8bit(bytes) hex numbers for example A=0B and B=6C
-     //the equation is ((A * 256) + B) / 4, so 0B=11 and 6C=108
-     //so rpm=((11 * 256) + 108) / 4 = 731 a normal idle car engine rpm
       rpm=0;                                                                                            
       for (i=10;i<14;i++){                              //in that 4 chars of bufin array which is the RPM value
         if ((bufin[i]>='A') && (bufin[i]<='F')){        //if char is between 'A' and 'F'
