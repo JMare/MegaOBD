@@ -76,7 +76,8 @@ void setup() {
   lcd.print("OBD Connected");
   Serial.println("SPD timer initializing - going to void loop()");
   
-  t.every(250,rpm_calc);
+  //int rpmevent = t.every(250,rpm_calc);
+  int spdevent = t.every(250,speedpull);
  
 }
 
@@ -84,13 +85,16 @@ void loop() {
   // put your main code here, to run repeatedly:
   delay(1000);
     lcd.clear();
-    lcd.print("RPM IS: ");
+    lcd.print("RPM: ");
+    lcd.setCursor(0,1);
+    lcd.print("Speed: ");
   while (!obdabort)
   {
   lcd.setCursor(8,0);
   lcd.print(rpm);
   lcd.print("   ");
-  
+  lcd.setCursor(8,1);
+  lcd.print(spdk);
     Serial.print("RPM IS:");
    Serial.print(rpm);
   Serial.println();
@@ -274,30 +278,32 @@ void speedpull()
 {
   boolean prompt,valid;
   char recvChar;
+  char bufin[15];
   int i;
   
-  if (!(obdabort))
-  {
+ // if (!(obdabort)) //if no obd error
+ // {
+
     valid=false;
     prompt=false;
-    btSerial.print("010D1");
-    btSerial.print("\r");
-    while (btSerial.available() <= 0);
+    btSerial.print("010D1"); //send PID for speed
+    btSerial.print("\r"); //carriage return
+    while (btSerial.available() <= 0); // wait while no data
     i = 0;
-    while ((btSerial.available()>0) && (i<12));
+    while ((btSerial.available()>0) && (!prompt)); //if data is coming
     {
-      recvChar = btSerial.read();
-      if ((i<15) && (!(recvChar==32)))
+      recvChar = btSerial.read(); //read from elm
+      if ((i<11) && (!(recvChar==32))) //take no more than 15 chars and ignore space
       {
-        bufin[i]=recvChar;
-        i=i+1;
+        bufin[i]=recvChar; //store char in the array
+        i=i+1; //increment the counter
       }
-      if (recvChar==62) prompt=true;
+      if (recvChar==62) prompt=true; //once a > comes back stop reading data
     }
     
-    if ((bufin[5]=='4') && (bufin[6]=='1') && (bufin[7]=='0') && (bufin[8]=='D'))
+    if ((bufin[6]=='4') && (bufin[7]=='1') && (bufin[8]=='0') && (bufin[9]=='D')) // check if we have a valid speed repsonse
     {
-      valid=true;
+      valid=true; 
     }
     else
     {
@@ -312,7 +318,7 @@ void speedpull()
       
       spdk=0;
       
-      char hexspeed[2] = { bufin[10] , bufin[11] };
+      char hexspeed[ ] = { bufin[10] , bufin[11] };
       int spddisp = (int) strtol(hexspeed, NULL, 16);
       
       spdk = spddisp;
@@ -321,11 +327,11 @@ void speedpull()
     {
       spdabort = true;
       spd_retries+=1;
-      spdk=0;
+      //spdk=0;
       if (spd_retries>=SPD_CMD_RETRIES) obdabort=true;
  
-    }     //need to work out how to pull the two speed characters and convert to dec.
-  } 
+    } 
+  //} 
      
 }
 
@@ -345,7 +351,7 @@ void rpm_calc(){
      i=0;
      while ((btSerial.available()>0) && (!prompt)){  //if there is data from ELM and prompt is false
        recvChar = btSerial.read();                   //read from ELM
-       if ((i<15)&&(!(recvChar==32))) {                     //the normal respond to previus command is 010C1/r41 0C ?? ??>, so count 15 chars and ignore char 32 which is space
+       if ((i<13)&&(!(recvChar==32))) {                     //the normal respond to previus command is 010C1/r41 0C ?? ??>, so count 15 chars and ignore char 32 which is space
          bufin[i]=recvChar;                                 //put received char in bufin array
          i=i+1;                                             //increase i
        }  
