@@ -26,18 +26,6 @@ boolean rpm_retries;         //Variable for RPM cmd retries
 
 SoftwareSerial btSerial(RxD, TxD);
 Timer t;
-//#ifdef HC05_SOFTWARE_SERIAL
-//#include <SoftwareSerial.h>
-//HC05 btSerial = HC05(CmdPin, StatePin, RxD, TxD);  // cmd, state, rx, tx
-//#else
-//HC05 btSerial = HC05(CmdPin, StatePin);  // cmd, state
-//#endif
-
-//#ifdef DEBUG_HC05
-//#ifdef DEBUG_SW_PORT
-//  extern SoftwareSerial DEBUG_PORT;
-//#endif
-//#endif
 
 void setup() {
    lcd.begin(16, 2);               // start the library
@@ -47,13 +35,6 @@ void setup() {
    pinMode(RxD, INPUT);
    pinMode(TxD, OUTPUT);
    pinMode(CmdPin, OUTPUT);
-   //pinMode(StatePin, OUTPUT);
-  // put your setup code here, to run once:
-  //DEBUG_BEGIN(38400);
-  //DEBUG_PRINTLN("Setup");
-  //delay(3000);  // this delay is for debugging convenience only
-  //DEBUG_PRINTLN("DelayComplete");
-  //btSerial.println(btSerial.findBaud());
   
   Serial.begin(38400);
   
@@ -73,10 +54,7 @@ void setup() {
   {
     while (btabort == true)
     {
-      lcd.clear();
-  lcd.print("BT ABORT");
-      Serial.println("BTABORT");
-      delay(3000);
+      abortloop("BT ABORT - RESET");
     }
   }
   Serial.println("Bluetooth Connection Achieved");
@@ -90,10 +68,7 @@ void setup() {
   {
      while (obdabort == true)
     {
-      lcd.clear();
-  lcd.print("OBD ABORT");
-      Serial.println("obdabort");
-      delay(3000);
+      abortloop("OBD ABORT - RESET");
     }
   }
   Serial.println("Well done device pairing complete");
@@ -125,11 +100,15 @@ void loop() {
   }
   while (obdabort == true)
     {
-      lcd.clear();
-      lcd.print("OBD Abort");
-      Serial.println("obdabort");
-      delay(3000);
+      abortloop("OBD ABORT - RESET");
     }
+}
+
+void abortloop(char m[]){
+  lcd.clear();
+  lcd.print(m);
+  Serial.println(m);
+  delay(3000);
 }
 
 void enterATMode()
