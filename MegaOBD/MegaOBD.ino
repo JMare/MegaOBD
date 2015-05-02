@@ -40,7 +40,7 @@ void setup()
    	Serial.println("Serial connected");
 
    	//establish connection with HC-05 to the ELM327
-   	setupBTcon();
+  	setupBTcon();
    	if (btabort == true)
   	{
     	while (btabort == true)
@@ -60,22 +60,22 @@ void setup()
     	}
   	}
 
-  	Serial.println("setup() complete");
+  	Serial.println("setup() complete"); 
 }
 
 void loop()
 {
 	rpmstored = getRPM();
-	spdstored = getSPD();
+	//spdstored = getSPD();
 
-	Serial.print("Speed: ");
-	Serial.print(spdstored);
-	Serial.println();
-	Serial.print("RPM: ")
+	//Serial.print("Speed: ");
+	//Serial.print(spdstored);
+	//Serial.println();
+	Serial.print("RPM: ");
 	Serial.print(rpmstored);
 	Serial.println();
 
-	delay(500);
+	delay(2000);
 }
 
 int getSPD(void)
@@ -88,9 +88,33 @@ int getSPD(void)
 int getRPM(void)
 {
 	btSerial.print("010C1\r");
-	OBD_read();
-	return ((strtol(&rxData[6], 0, 16) * 256) + strtol(&rxData[9], 0, 16)) / 4;
+    OBD_read();
+    //char rxData[20] = {'0', '1', '0', 'C', '1', '4', '1', '0', 'C', '1', '2', '7', '3', '>', '\0'}; //fake data
+    Serial.println("printagain");
+    Serial.println(rxData);
+    char rpmAhex[3] = {rxData[9], rxData[10], '\0'};
+    long int rpmA = strtol(rpmAhex, NULL, 16);
+    char rpmBhex[3] = {rxData[11], rxData[12], '\0'};
+    long int rpmB = strtol(rpmBhex, NULL, 16);
+
+    /*Serial.print("rpmBhex: ");
+    Serial.print(rpmBhex);
+    Serial.println();
+    Serial.print("rpmB: ");
+    Serial.print(rpmB);
+    Serial.println(); */
+	//int rpmB = strtol(&rxData[11], 0, 16);
+	//return ((strtol(&rxData[6], 0, 16) * 256) + strtol(&rxData[9], 0, 16)) / 4;
+	return ((rpmA * 256) + rpmB) / 4;
 }
+
+/* void OBD_readfake(void)
+{
+	char rxData[20] = {'0', '1', '0', 'C', '1', '4', '1', '0', 'C', '1', '2', '7', '3', '>', '\0'};
+	//rxData[rxIndex++] = '\0';//Converts the array into a string
+  	Serial.println(rxData);
+ 	//rxIndex = 0; //Set this to 0 so next time we call the read we get a "clean buffer"
+} */
 
 void OBD_read(void)
 {
@@ -98,14 +122,16 @@ void OBD_read(void)
   do {
     if (btSerial.available() > 0)
     {
-      c = Serial1.read();
-      if ((c != '>') && (c != '\r') && (c != '\n')) //Keep these out of our buffer
+      c = btSerial.read();
+      if (/*(c != '>') && */(c != '\r') && (c != '\n') && (c != ' ')) //Keep these out of our buffer
       {
         rxData[rxIndex++] = c; //Add whatever we receive to the buffer
       }
     }
   } while (c != '>'); //The ELM327 ends its response with this char so when we get it we exit out.
+
   rxData[rxIndex++] = '\0';//Converts the array into a string
+  Serial.println(rxData);
   rxIndex = 0; //Set this to 0 so next time we call the read we get a "clean buffer"
 
 }
@@ -200,7 +226,7 @@ void sendATCommand(char *command)
 			Serial.println("OK Response received");
 			OK_flag=true;   //if response is OK then OK-flag set to true
 			}
-			delay(100);
+			delay(500);
 		}
 
 		if (retries>=BT_CMD_RETRIES) {                        //if bluetooth retries reached
