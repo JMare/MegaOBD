@@ -5,9 +5,9 @@ This is a partial rewrite commited to git on 5/2/15
 */
 
 //Define the pins that connect to the HC-05
-#define RxD 11
-#define TxD 12
-#define CmdPin 3
+#define RxD 50
+#define TxD 51
+#define CmdPin 52
 
 //Establish max retries for our functions
 
@@ -145,7 +145,7 @@ void setupBTcon()
 
 	Serial.println("Entering AT Mode");
 	enterATMode();                          //enter HC-05 AT mode
-	delay(200);
+	delay(2500);
 	Serial.println("Sending AT Commands");
 	sendATCommand("RESET");                  //send to HC-05 RESET
 	delay(500);
