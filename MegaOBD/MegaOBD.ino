@@ -66,23 +66,26 @@ void setup()
 void loop()
 {
 	rpmstored = getRPM();
-	//spdstored = getSPD();
+	spdstored = getSPD();
 
-	//Serial.print("Speed: ");
-	//Serial.print(spdstored);
-	//Serial.println();
+	Serial.print("Speed: ");
+	Serial.print(spdstored);
+	Serial.println();
 	Serial.print("RPM: ");
 	Serial.print(rpmstored);
 	Serial.println();
 
-	delay(2000);
+	delay(50);
 }
 
 int getSPD(void)
 {
 	btSerial.print("010D1\r");
 	OBD_read();
-  	return strtol(&rxData[6], 0, 16);
+  	char spdhex[3] = {rxData[9], rxData[10], '\0'};
+    long int spdint = strtol(spdhex, NULL, 16);
+    return(spdint);
+
 }
 
 int getRPM(void)
@@ -90,8 +93,8 @@ int getRPM(void)
 	btSerial.print("010C1\r");
     OBD_read();
     //char rxData[20] = {'0', '1', '0', 'C', '1', '4', '1', '0', 'C', '1', '2', '7', '3', '>', '\0'}; //fake data
-    Serial.println("printagain");
-    Serial.println(rxData);
+    //Serial.println("printagain");
+    //Serial.println(rxData);
     char rpmAhex[3] = {rxData[9], rxData[10], '\0'};
     long int rpmA = strtol(rpmAhex, NULL, 16);
     char rpmBhex[3] = {rxData[11], rxData[12], '\0'};
@@ -131,7 +134,7 @@ void OBD_read(void)
   } while (c != '>'); //The ELM327 ends its response with this char so when we get it we exit out.
 
   rxData[rxIndex++] = '\0';//Converts the array into a string
-  Serial.println(rxData);
+  //Serial.println(rxData);
   rxIndex = 0; //Set this to 0 so next time we call the read we get a "clean buffer"
 
 }
