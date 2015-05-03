@@ -4,6 +4,23 @@ This is a partial rewrite commited to git on 5/2/15
 
 */
 
+//menu syst setup
+#include <LiquidCrystal.h>
+#include <Encoder.h>
+
+Encoder myEnc(18, 19); //start the encoder library with the interupt pins
+const int ENC_PUSH_PIN = 27; //push button pin
+int ENC_PUSH_STATE = 0; 
+int menu_var = 0;
+int menu_pos_old = 1;
+int menu_pos = 1;
+int menu_change = 0;
+
+// initialize the library with the numbers of the interface pins
+LiquidCrystal lcd(22, 24, 32, 30, 28, 26);
+
+
+
 //Define the pins that connect to the HC-05
 #define RxD 50
 #define TxD 51
@@ -26,11 +43,18 @@ char rxData[20];
 char rxIndex = 0;
 int rpmstored = 0;
 int spdstored = 0;
+int tmpstored = 0;
+int vltstored = 0;
 //Establish serial connection to the HC-05
 SoftwareSerial btSerial(RxD, TxD);
 
 void setup()
-{
+	{
+	  // set up the LCD's number of columns and rows:
+  lcd.begin(16, 2);
+
+  //Set the encoder push button input
+  pinMode(ENC_PUSH_PIN, INPUT);
 	pinMode(RxD, INPUT);
    	pinMode(TxD, OUTPUT);
    	pinMode(CmdPin, OUTPUT);
@@ -38,6 +62,10 @@ void setup()
    	//Establish connection to computer
    	Serial.begin(38400);
    	Serial.println("Serial connected");
+
+   	lcd.clear();
+   	lcd.setCursor(0,0);
+   	lcd.print("BT Connecting");
 
    	//establish connection with HC-05 to the ELM327
   	setupBTcon();
@@ -51,6 +79,9 @@ void setup()
 
   	Serial.println("setupBTcon() complete");
 
+   	lcd.clear();
+   	lcd.setCursor(0,0);
+   	lcd.print("OBD initialize");
   	OBD_init();
 	if (obdabort == true)
   	{
@@ -61,21 +92,117 @@ void setup()
   	}
 
   	Serial.println("setup() complete"); 
+  	lcd.clear();
 }
+
+long oldPosition  = 0;
 
 void loop()
 {
 	rpmstored = getRPM();
 	spdstored = getSPD();
+	tmpstored = getTMP();
+	vltstored = getVLT();
+
 
 	Serial.print("Speed: ");
 	Serial.print(spdstored);
 	Serial.println();
 	Serial.print("RPM: ");
 	Serial.print(rpmstored);
-	Serial.println();
+	Serial.println(); 
 
-	delay(50);
+	//delay(50);
+	// Poll the push button on the encoder
+	ENC_PUSH_STATE = digitalRead(ENC_PUSH_PIN);
+
+	//poll the encoder and calculate the menu position
+	read_enc();
+
+	if (menu_pos != menu_pos_old)
+	{
+		lcd.clear();
+	}
+
+	switch (menu_pos)
+	{
+		case 1:
+			lcd.setCursor(0,0);
+			lcd.print("Speed:");
+			lcd.setCursor(0,1);
+			lcd.print(spdstored);
+			lcd.print("     ");
+			break;
+
+		case 2:
+			lcd.setCursor(0,0);
+			lcd.print("RPM:");
+			lcd.setCursor(0,1);
+			lcd.print(rpmstored);
+			lcd.print("     ");
+			break;
+		case 3:
+			lcd.setCursor(0,0);
+			lcd.print("Coolant Temp: ");
+			lcd.setCursor(0,1);
+			lcd.print(tmpstored);
+			lcd.print("    ");
+			break;
+		case 4:
+			lcd.setCursor(0,0);
+			lcd.print("Battery Voltage: ");
+			lcd.setCursor(0,1);
+			lcd.print(vltstored);
+			lcd.print("    ");
+			break;
+
+	}
+
+}
+
+void read_enc()
+{
+	menu_pos_old = menu_pos;
+	long newPosition = myEnc.read();
+	if (newPosition != oldPosition)
+	{
+		menu_change = (newPosition - oldPosition);
+
+		oldPosition = newPosition;
+
+		//this if stops menu var getting outside 1-16
+		if ((menu_var + menu_change <= 16) && (menu_var + menu_change >= 0))
+		{
+		menu_var = menu_var + menu_change;
+		}
+		else if (menu_var + menu_change >=16)
+		{
+			menu_var = 16;
+		}
+		else if (menu_var + menu_change <=0)
+		{
+			menu_var = 0;
+		}
+
+		if ((menu_var >=0) && (menu_var < 4))
+		{
+			menu_pos = 1;
+		}
+		else if ((menu_var >=4) && (menu_var < 8))
+		{
+			menu_pos = 2;
+		}
+		else if ((menu_var >=8) && (menu_var < 12))
+		{
+			menu_pos = 3;
+		}
+		else if ((menu_var >=12) && (menu_var <= 16))
+		{
+			menu_pos = 4;
+		}
+
+	}
+	//return(menu_pos);
 }
 
 int getSPD(void)
@@ -86,6 +213,39 @@ int getSPD(void)
     long int spdint = strtol(spdhex, NULL, 16);
     return(spdint);
 
+}
+
+int getTMP(void)
+{
+	btSerial.print("01051\r");
+	OBD_read();
+  	char tmphex[3] = {rxData[9], rxData[10], '\0'};
+    long int tmpint = strtol(tmphex, NULL, 16);
+    return(tmpint - 40);
+
+}
+
+int getVLT(void)
+{
+	btSerial.print("01421\r");
+    OBD_read();
+    //char rxData[20] = {'0', '1', '0', 'C', '1', '4', '1', '0', 'C', '1', '2', '7', '3', '>', '\0'}; //fake data
+    //Serial.println("printagain");
+    //Serial.println(rxData);
+    char vltAhex[3] = {rxData[9], rxData[10], '\0'};
+    long int vltA = strtol(vltAhex, NULL, 16);
+    char vltBhex[3] = {rxData[11], rxData[12], '\0'};
+    long int vltB = strtol(vltBhex, NULL, 16);
+
+    /*Serial.print("rpmBhex: ");
+    Serial.print(rpmBhex);
+    Serial.println();
+    Serial.print("rpmB: ");
+    Serial.print(rpmB);
+    Serial.println(); */
+	//int rpmB = strtol(&rxData[11], 0, 16);
+	//return ((strtol(&rxData[6], 0, 16) * 256) + strtol(&rxData[9], 0, 16)) / 4;
+	return ((vltA * 256) + vltB) / 1000;
 }
 
 int getRPM(void)
@@ -144,8 +304,11 @@ void setupBTcon()
 	btabort=false;                    //set bluetooth error flag to false
 
 	Serial.println("Entering AT Mode");
+	lcd.setCursor(0,1);
+	lcd.print("Entering AT Mode");
+
 	enterATMode();                          //enter HC-05 AT mode
-	delay(2500);
+	delay(500);
 	Serial.println("Sending AT Commands");
 	sendATCommand("RESET");                  //send to HC-05 RESET
 	delay(500);
@@ -162,8 +325,11 @@ void setupBTcon()
 	sendATCommand("LINK=AABB,CC,112233");    //send LINK, link with OBD address
 	delay(500); 
 	Serial.println("AT Commants sent, entering comms mode");
+	lcd.setCursor(0,1);
+	lcd.print("Entering comms Mode");
+	lcd.print("       ");
 	enterComMode();                          //enter HC-05 comunication mode
-	delay(200);
+	delay(500);
 }
 
 void enterATMode()
@@ -206,6 +372,11 @@ void sendATCommand(char *command)
 			Serial.print(command);
 			Serial.println();
 
+			lcd.setCursor(0,1);
+			lcd.print("AT+");
+			lcd.print(command);
+			lcd.print("        ");
+
 			btSerial.print("AT");                       //sent AT cmd to HC-05
 			if(strlen(command) > 1){
 				btSerial.print("+");
@@ -241,7 +412,12 @@ void sendATCommand(char *command)
 
 void abortloop(char m[]){
   Serial.println(m);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print(m);
+
   delay(3000);
+
 }
 
 void OBD_init()
