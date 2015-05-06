@@ -294,6 +294,7 @@ void OBD_read(char *command, int bytes)
 {
 	boolean prompt,valid;
 	char c;
+	memset(&rxData[0], 0, sizeof(rxData));
 
 	if (!(obdabort)){
 		valid = false;
