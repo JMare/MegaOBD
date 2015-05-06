@@ -4,12 +4,15 @@ This is a partial rewrite commited to git on 5/2/15
 
 */
 
-//menu syst setup
+//library includes
 #include <LiquidCrystal.h>
 #include <Encoder.h>
-#include <Timer.h>
-Timer t;
+//#include <Timer.h> 
+#include <SoftwareSerial.h>
+//Timer t; //start timer
 
+
+//menu setup
 Encoder myEnc(18, 19); //start the encoder library with the interupt pins
 const int ENC_PUSH_PIN = 27; //push button pin
 int ENC_PUSH_STATE = 0; 
@@ -29,19 +32,16 @@ LiquidCrystal lcd(22, 24, 32, 30, 28, 26);
 #define CmdPin 52
 
 //Establish max retries for our functions
-
 #define OBD_CMD_RETRIES 3
 #define BT_CMD_RETRIES 5
-#define RPM_CMD_RETRIES 5
-#define SPD_CMD_RETRIES 5
 
-#include <SoftwareSerial.h>
-//#include <Timer.h> //remove these if possble
-//#include <LiquidCrystal.h>
 
+//abort flags and counters
 boolean obdabort;
 boolean btabort;
 boolean obd_retries;
+
+//data calculation variables inc ring buffer
 
 char rxData[20];
 long int hexAint;
@@ -51,16 +51,17 @@ int rpmstored = 0;
 int spdstored = 0;
 int tmpstored = 0;
 int vltstored = 0;
+
 //Establish serial connection to the HC-05
 SoftwareSerial btSerial(RxD, TxD);
 
 void setup()
-	{
+{
 	  // set up the LCD's number of columns and rows:
-  lcd.begin(16, 2);
+  	lcd.begin(16, 2);
 
   //Set the encoder push button input
-  pinMode(ENC_PUSH_PIN, INPUT);
+  	pinMode(ENC_PUSH_PIN, INPUT);
 	pinMode(RxD, INPUT);
    	pinMode(TxD, OUTPUT);
    	pinMode(CmdPin, OUTPUT);
@@ -100,29 +101,21 @@ void setup()
   	Serial.println("setup() complete"); 
   	lcd.clear();
 
-  	int rpmevent = t.every(50,getRPM);
-  	int spdevent = t.every(200,getSPD);
-  	int tmpevent = t.every(2000,getTMP);
-  	int vltevent = t.every(2000,getVLT);
+  	//int rpmevent = t.every(50,getRPM);
+  	//int spdevent = t.every(200,getSPD);
+  	//int tmpevent = t.every(2000,getTMP);
+  	//int vltevent = t.every(2000,getVLT);
 }
 
 long oldPosition  = 0;
 
 void loop()
 {
-	//delay(50);
-	//rpmstored = getRPM();
-	//spdstored = getSPD();
-	//tmpstored = getTMP();
-	//vltstored = getVLT();
-
-
-	Serial.print("Speed: ");
-	Serial.print(spdstored);
-	Serial.println();
-	Serial.print("RPM: ");
-	Serial.print(rpmstored);
-	Serial.println(); 
+	delay(50);
+	getRPM();
+	getSPD();
+	getTMP();
+	getVLT();
 
 	//delay(50);
 	// Poll the push button on the encoder
@@ -174,7 +167,7 @@ void loop()
     {
       abortloop("OBD ABORT - RESET");
     }
-    t.update();
+   // t.update();
 }
 
 void read_enc()
@@ -224,71 +217,36 @@ void read_enc()
 
 void getSPD(void)
 {
-	//btSerial.print("010D1\r");
+	Serial.println("getSPD");
 	OBD_read("010D1", 1);
-  	/*char spdhex[3] = {rxData[9], rxData[10], '\0'};
-    long int spdint = strtol(spdhex, NULL, 16);*/
-    //return(hexAint);
 	spdstored = hexAint;
+	Serial.println(spdstored);
 
 }
 
 void getTMP(void)
 {
-	//btSerial.print("01051\r");
+	Serial.println("getTMP");
 	OBD_read("01051", 1);
-  	/*char tmphex[3] = {rxData[9], rxData[10], '\0'};
-    long int tmpint = strtol(tmphex, NULL, 16);*/
-    //return(hexAint - 40);
 	tmpstored = hexAint - 40;
-
+	Serial.println(tmpstored);
 }
 
 void getVLT(void)
 {
+	Serial.println("getVLT");
     OBD_read("01421", 2);
-    //char rxData[20] = {'0', '1', '0', 'C', '1', '4', '1', '0', 'C', '1', '2', '7', '3', '>', '\0'}; //fake data
-    //Serial.println("printagain");
-    //Serial.println(rxData);
-   /* char vltAhex[3] = {rxData[9], rxData[10], '\0'};
-    long int vltA = strtol(vltAhex, NULL, 16);
-    char vltBhex[3] = {rxData[11], rxData[12], '\0'};
-    long int vltB = strtol(vltBhex, NULL, 16);*/
-
-    /*Serial.print("rpmBhex: ");
-    Serial.print(rpmBhex);
-    Serial.println();
-    Serial.print("rpmB: ");
-    Serial.print(rpmB);
-    Serial.println(); */
-	//int rpmB = strtol(&rxData[11], 0, 16);
-	//return ((strtol(&rxData[6], 0, 16) * 256) + strtol(&rxData[9], 0, 16)) / 4;
-
-	//return ((hexAint * 256) + hexBint) / 1000;
 	vltstored = ((hexAint * 256) + hexBint) / 1000;
+	Serial.println(vltstored);
 }
 
 void getRPM(void)
 {
+	Serial.println("getRPM");
     OBD_read("010C1", 2);
-
-    /*char rpmAhex[3] = {rxData[9], rxData[10], '\0'};
-    long int rpmA = strtol(rpmAhex, NULL, 16);
-    char rpmBhex[3] = {rxData[11], rxData[12], '\0'};
-    long int rpmB = strtol(rpmBhex, NULL, 16); */
-
-	//return ((hexAint * 256) + hexBint) / 4;
 	rpmstored = ((hexAint * 256) + hexBint) / 4;
+	Serial.println(rpmstored);
 }
-
-/* void OBD_readfake(void)
-{
-	char rxData[20] = {'0', '1', '0', 'C', '1', '4', '1', '0', 'C', '1', '2', '7', '3', '>', '\0'};
-	//rxData[rxIndex++] = '\0';//Converts the array into a string
-  	Serial.println(rxData);
- 	//rxIndex = 0; //Set this to 0 so next time we call the read we get a "clean buffer"
-} */
-
 
 void OBD_read(char *command, int bytes)
 {
@@ -300,6 +258,7 @@ void OBD_read(char *command, int bytes)
 		valid = false;
 		prompt = false;
 		btSerial.print(command);
+		Serial.println(command);
 		btSerial.print("\r");
 		while (btSerial.available() <= 0);
 
@@ -316,12 +275,15 @@ void OBD_read(char *command, int bytes)
       	}
 
       	rxData[rxIndex++] = '\0';
+      	Serial.println(rxData);
 
       	if ((rxData[7]==command[2]) && (rxData[8]==command[3])){ //if first four chars after our command is 410C
 		valid=true;                                                                  //corr response
+		Serial.println("valid=true");
 		} 
 		else {
-		valid=false;                                                                 //else we dont
+		valid=false;  
+		Serial.println("valid=false");                                                               //else we dont
 		}
 
 		if (valid){
@@ -350,26 +312,6 @@ void OBD_read(char *command, int bytes)
 			obdabort = true;
 		}
 	}
-}
-
-void OBD_read_bak(void)
-{
-  char c;
-  do {
-    if (btSerial.available() > 0)
-    {
-      c = btSerial.read();
-      if (/*(c != '>') && */(c != '\r') && (c != '\n') && (c != ' ')) //Keep these out of our buffer
-      {
-        rxData[rxIndex++] = c; //Add whatever we receive to the buffer
-      }
-    }
-  } while (c != '>'); //The ELM327 ends its response with this char so when we get it we exit out.
-
-  rxData[rxIndex++] = '\0';//Converts the array into a string
-  //Serial.println(rxData);
-  rxIndex = 0; //Set this to 0 so next time we call the read we get a "clean buffer"
-
 }
 
 void setupBTcon()
