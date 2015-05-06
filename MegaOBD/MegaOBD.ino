@@ -7,6 +7,8 @@ This is a partial rewrite commited to git on 5/2/15
 //menu syst setup
 #include <LiquidCrystal.h>
 #include <Encoder.h>
+#include <Timer.h>
+Timer t;
 
 Encoder myEnc(18, 19); //start the encoder library with the interupt pins
 const int ENC_PUSH_PIN = 27; //push button pin
@@ -39,7 +41,11 @@ LiquidCrystal lcd(22, 24, 32, 30, 28, 26);
 
 boolean obdabort;
 boolean btabort;
+boolean obd_retries;
+
 char rxData[20];
+long int hexAint;
+long int hexBint;
 char rxIndex = 0;
 int rpmstored = 0;
 int spdstored = 0;
@@ -93,17 +99,22 @@ void setup()
 
   	Serial.println("setup() complete"); 
   	lcd.clear();
+
+  	int rpmevent = t.every(50,getRPM);
+  	int spdevent = t.every(200,getSPD);
+  	int tmpevent = t.every(2000,getTMP);
+  	int vltevent = t.every(2000,getVLT);
 }
 
 long oldPosition  = 0;
 
 void loop()
 {
-	delay(25);
-	rpmstored = getRPM();
-	spdstored = getSPD();
-	tmpstored = getTMP();
-	vltstored = getVLT();
+	//delay(50);
+	//rpmstored = getRPM();
+	//spdstored = getSPD();
+	//tmpstored = getTMP();
+	//vltstored = getVLT();
 
 
 	Serial.print("Speed: ");
@@ -128,6 +139,7 @@ void loop()
 	switch (menu_pos)
 	{
 		case 1:
+
 			lcd.setCursor(0,0);
 			lcd.print("Speed:");
 			lcd.setCursor(0,1);
@@ -158,7 +170,11 @@ void loop()
 			break;
 
 	}
-
+  while (obdabort == true)
+    {
+      abortloop("OBD ABORT - RESET");
+    }
+    t.update();
 }
 
 void read_enc()
@@ -206,37 +222,38 @@ void read_enc()
 	//return(menu_pos);
 }
 
-int getSPD(void)
+void getSPD(void)
 {
-	btSerial.print("010D1\r");
-	OBD_read();
-  	char spdhex[3] = {rxData[9], rxData[10], '\0'};
-    long int spdint = strtol(spdhex, NULL, 16);
-    return(spdint);
+	//btSerial.print("010D1\r");
+	OBD_read("010D1", 1);
+  	/*char spdhex[3] = {rxData[9], rxData[10], '\0'};
+    long int spdint = strtol(spdhex, NULL, 16);*/
+    //return(hexAint);
+	spdstored = hexAint;
 
 }
 
-int getTMP(void)
+void getTMP(void)
 {
-	btSerial.print("01051\r");
-	OBD_read();
-  	char tmphex[3] = {rxData[9], rxData[10], '\0'};
-    long int tmpint = strtol(tmphex, NULL, 16);
-    return(tmpint - 40);
+	//btSerial.print("01051\r");
+	OBD_read("01051", 1);
+  	/*char tmphex[3] = {rxData[9], rxData[10], '\0'};
+    long int tmpint = strtol(tmphex, NULL, 16);*/
+    //return(hexAint - 40);
+	tmpstored = hexAint - 40;
 
 }
 
-int getVLT(void)
+void getVLT(void)
 {
-	btSerial.print("01421\r");
-    OBD_read();
+    OBD_read("01421", 2);
     //char rxData[20] = {'0', '1', '0', 'C', '1', '4', '1', '0', 'C', '1', '2', '7', '3', '>', '\0'}; //fake data
     //Serial.println("printagain");
     //Serial.println(rxData);
-    char vltAhex[3] = {rxData[9], rxData[10], '\0'};
+   /* char vltAhex[3] = {rxData[9], rxData[10], '\0'};
     long int vltA = strtol(vltAhex, NULL, 16);
     char vltBhex[3] = {rxData[11], rxData[12], '\0'};
-    long int vltB = strtol(vltBhex, NULL, 16);
+    long int vltB = strtol(vltBhex, NULL, 16);*/
 
     /*Serial.print("rpmBhex: ");
     Serial.print(rpmBhex);
@@ -246,30 +263,22 @@ int getVLT(void)
     Serial.println(); */
 	//int rpmB = strtol(&rxData[11], 0, 16);
 	//return ((strtol(&rxData[6], 0, 16) * 256) + strtol(&rxData[9], 0, 16)) / 4;
-	return ((vltA * 256) + vltB) / 1000;
+
+	//return ((hexAint * 256) + hexBint) / 1000;
+	vltstored = ((hexAint * 256) + hexBint) / 1000;
 }
 
-int getRPM(void)
+void getRPM(void)
 {
-	btSerial.print("010C1\r");
-    OBD_read();
-    //char rxData[20] = {'0', '1', '0', 'C', '1', '4', '1', '0', 'C', '1', '2', '7', '3', '>', '\0'}; //fake data
-    //Serial.println("printagain");
-    //Serial.println(rxData);
-    char rpmAhex[3] = {rxData[9], rxData[10], '\0'};
+    OBD_read("010C1", 2);
+
+    /*char rpmAhex[3] = {rxData[9], rxData[10], '\0'};
     long int rpmA = strtol(rpmAhex, NULL, 16);
     char rpmBhex[3] = {rxData[11], rxData[12], '\0'};
-    long int rpmB = strtol(rpmBhex, NULL, 16);
+    long int rpmB = strtol(rpmBhex, NULL, 16); */
 
-    /*Serial.print("rpmBhex: ");
-    Serial.print(rpmBhex);
-    Serial.println();
-    Serial.print("rpmB: ");
-    Serial.print(rpmB);
-    Serial.println(); */
-	//int rpmB = strtol(&rxData[11], 0, 16);
-	//return ((strtol(&rxData[6], 0, 16) * 256) + strtol(&rxData[9], 0, 16)) / 4;
-	return ((rpmA * 256) + rpmB) / 4;
+	//return ((hexAint * 256) + hexBint) / 4;
+	rpmstored = ((hexAint * 256) + hexBint) / 4;
 }
 
 /* void OBD_readfake(void)
@@ -280,7 +289,69 @@ int getRPM(void)
  	//rxIndex = 0; //Set this to 0 so next time we call the read we get a "clean buffer"
 } */
 
-void OBD_read(void)
+
+void OBD_read(char *command, int bytes)
+{
+	boolean prompt,valid;
+	char c;
+
+	if (!(obdabort)){
+		valid = false;
+		prompt = false;
+		btSerial.print(command);
+		btSerial.print("\r");
+		while (btSerial.available() <= 0);
+
+		rxIndex = 0;
+
+		while ((btSerial.available()>0) && (!prompt))
+		{
+			c = btSerial.read();
+			if (/*(c != '>') && */(rxIndex<14) && (c != '\r') && (c != '\n') && (c != ' ')) //Keep these out of our buffer
+      		{
+       			rxData[rxIndex++] = c; //Add whatever we receive to the buffer
+      		}
+      		if (c == 62) prompt=true;
+      	}
+
+      	rxData[rxIndex++] = '\0';
+
+      	if ((rxData[7]==command[2]) && (rxData[8]==command[3])){ //if first four chars after our command is 410C
+		valid=true;                                                                  //corr response
+		} 
+		else {
+		valid=false;                                                                 //else we dont
+		}
+
+		if (valid){
+			obd_retries = 0;
+
+			if (bytes == 1)
+			{
+				char hexA[3] = {rxData[9], rxData[10], '\0'};
+   				hexAint = strtol(hexA, NULL, 16);
+			}
+			else if (bytes == 2)
+			{
+				char hexA[3] = {rxData[9], rxData[10], '\0'};
+				hexAint = strtol(hexA, NULL, 16);
+				char hexB[3] = {rxData[11], rxData[12], '\0'};
+				hexBint = strtol(hexB, NULL, 16);
+			}
+		}
+
+	}
+
+	if (!valid) {
+		obd_retries+=1;
+
+		if (obd_retries>=OBD_CMD_RETRIES) {
+			obdabort = true;
+		}
+	}
+}
+
+void OBD_read_bak(void)
 {
   char c;
   do {
