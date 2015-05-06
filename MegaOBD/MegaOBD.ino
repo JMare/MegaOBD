@@ -99,6 +99,7 @@ long oldPosition  = 0;
 
 void loop()
 {
+	delay(25);
 	rpmstored = getRPM();
 	spdstored = getSPD();
 	tmpstored = getTMP();
