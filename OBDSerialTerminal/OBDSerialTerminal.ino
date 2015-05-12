@@ -169,7 +169,7 @@ void sendATCommand(char *command)
 
 		while ((retries<BT_CMD_RETRIES) && (!(OK_flag))){     //while not OK and bluetooth cmd retries not reached
 		  
-			Serial.print("Sending AT Command: AT+");
+                        Serial.print("Sending AT Command: AT+");
 			Serial.print(command);
 			Serial.println();
 
