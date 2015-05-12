@@ -25,6 +25,10 @@ boolean obdabort;
 boolean btabort;
 boolean obd_retries;
 
+//Ringbuffer
+char rxData[20];
+char rxIndex = 0;
+
 //Establish serial connection to the HC-05
 SoftwareSerial btSerial(RxD, TxD);
 
@@ -72,9 +76,28 @@ void loop()
   
 
   	if (btSerial.available()) {
-    	int inByte = btSerial.read();
-    	Serial.write(inByte); 
-  }
+		boolean prompt;
+
+		char c;
+		memset(&rxData[0], 0, sizeof(rxData)); //reset ring buffer
+		prompt = false; //prompt false
+		rxIndex = 0; //reset index
+
+		while ((btSerial.available()>0) && (!prompt))
+		{
+			c = btSerial.read();
+			if (/*(c != '>') && */(rxIndex<14) && (c != '\r') && (c != '\n') && (c != ' ')) //Keep these out of our buffer
+	  		{
+	   			rxData[rxIndex++] = c; //Add whatever we receive to the buffer
+	  		}
+	  		if (c == 62) prompt=true; //if c=> then set prompt to true and exit loop
+	  	}
+
+	  	rxData[rxIndex++] = '\0'; //convert to string
+
+	  	Serial.println(rxData); //once data is collected print to serial terminal and go back to waiting for serial input
+  	}
+
   while (obdabort == true)
     {
       abortloop("OBD ABORT - RESET");
