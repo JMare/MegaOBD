@@ -43,7 +43,7 @@ boolean obd_retries;
 
 //data calculation variables inc ring buffer
 
-char rxData[34];
+char rxData[50];
 long int hexAint;
 long int hexBint;
 int rxIndex = 0;
@@ -105,14 +105,15 @@ void setup()
   	//int spdevent = t.every(200,getSPD);
   	//int tmpevent = t.every(2000,getTMP);
   	//int vltevent = t.every(2000,getVLT);
-  	int dataevent = t.every(1000,getdata);
+  	//int dataevent = t.every(100,getdata);
 }
 
 long oldPosition  = 0;
 
 void loop()
 {
-	//getdata();
+        delay(100);
+        getdata();
 	//getRPM();
 	//getSPD();
 	//getTMP();
@@ -225,18 +226,24 @@ void getdata(void)
 	char hexA[3] = {rxData[18], rxData[19], '\0'};
 	spdstored = strtol(hexA, NULL, 16);
 
-	char hexA[3] = {rxData[22], rxData[23], '\0'};
+	//hexA[3] = {rxData[22], rxData[23], '\0'};
+        hexA[1] = rxData[22];
+        hexA[2] = rxData[23];
+        hexA[3] = '\0';
 	tmpstored = strtol(hexA, NULL, 16) - 40;
 
-	char hexA[3] = {rxData[28], rxData[29], '\0'};
+	//hexA[3] = {rxData[28], rxData[29], '\0'};
+        hexA[1] = rxData[28];
+        hexA[2] = rxData[29];
+        hexA[3] = '\0';
 	char hexB[3] = {rxData[30], rxData[31], '\0'};
 	hexAint = strtol(hexA, NULL, 16);
 	hexBint = strtol(hexB, NULL, 16);
 	rpmstored = ((hexAint * 256) + hexBint) / 4;
 
-	Serial.println("getvlt");
-	OBD_read("AT RV");
-	Serial.println(rxData);
+	//Serial.println("getvlt");
+	//OBD_read("AT RV");
+	//Serial.println(rxData);
 }
 
 void OBD_read(char *command)
@@ -249,7 +256,7 @@ void OBD_read(char *command)
 		valid = false;
 		prompt = false;
 		btSerial.print(command);
-		Serial.println(command);
+		//Serial.println(command);
 		btSerial.print("\r");
 		while (btSerial.available() <= 0);
 
@@ -269,15 +276,15 @@ void OBD_read(char *command)
       	}
 
       	rxData[rxIndex++] = '\0';
-      	Serial.println(rxData);
+      	//Serial.println(rxData);
 
       	if (0 == 0/*(rxData[7]==command[2]) && (rxData[8]==command[3])*/){ //if first four chars match our command chars
 		valid=true;                                                                  //corr response
-		Serial.println("valid=true");
+		//Serial.println("valid=true");
 		} 
 		else {
 		valid=false;  
-		Serial.println("valid=false");                                                               //else we dont
+		//Serial.println("valid=false");                                                               //else we dont
 		}
 
 		if (valid){
