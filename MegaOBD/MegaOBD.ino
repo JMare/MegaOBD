@@ -43,7 +43,7 @@ boolean obd_retries;
 
 //data calculation variables inc ring buffer
 
-char rxData[50];
+char rxData[34];
 long int hexAint;
 long int hexBint;
 int rxIndex = 0;
@@ -219,44 +219,27 @@ void read_enc()
 void getdata(void)
 {
 	Serial.println("getdata");
-	OBD_read("010D050C3", 1);
+	OBD_read("010D050C3");
+	Serial.println(rxData);
+
+	char hexA[3] = {rxData[18], rxData[19], '\0'};
+	spdstored = strtol(hexA, NULL, 16);
+
+	char hexA[3] = {rxData[22], rxData[23], '\0'};
+	tmpstored = strtol(hexA, NULL, 16) - 40;
+
+	char hexA[3] = {rxData[28], rxData[29], '\0'};
+	char hexB[3] = {rxData[30], rxData[31], '\0'};
+	hexAint = strtol(hexA, NULL, 16);
+	hexBint = strtol(hexB, NULL, 16);
+	rpmstored = ((hexAint * 256) + hexBint) / 4;
+
+	Serial.println("getvlt");
+	OBD_read("AT RV");
 	Serial.println(rxData);
 }
 
-void getSPD(void)
-{
-	Serial.println("getSPD");
-	OBD_read("010D1", 1);
-	spdstored = hexAint;
-	Serial.println(spdstored);
-
-}
-
-void getTMP(void)
-{
-	Serial.println("getTMP");
-	OBD_read("01051", 1);
-	tmpstored = hexAint - 40;
-	Serial.println(tmpstored);
-}
-
-void getVLT(void)
-{
-	Serial.println("getVLT");
-    OBD_read("01421", 2);
-	vltstored = ((hexAint * 256) + hexBint) / 1000;
-	Serial.println(vltstored);
-}
-
-void getRPM(void)
-{
-	Serial.println("getRPM");
-    OBD_read("010C1", 2);
-	rpmstored = ((hexAint * 256) + hexBint) / 4;
-	Serial.println(rpmstored);
-}
-
-void OBD_read(char *command, int bytes)
+void OBD_read(char *command)
 {
 	boolean prompt,valid;
 	char c;
@@ -299,19 +282,6 @@ void OBD_read(char *command, int bytes)
 
 		if (valid){
 			obd_retries = 0;
-
-			/*if (bytes == 1)
-			{
-				char hexA[3] = {rxData[9], rxData[10], '\0'};
-   				hexAint = strtol(hexA, NULL, 16);
-			}
-			else if (bytes == 2)
-			{
-				char hexA[3] = {rxData[9], rxData[10], '\0'};
-				hexAint = strtol(hexA, NULL, 16);
-				char hexB[3] = {rxData[11], rxData[12], '\0'};
-				hexBint = strtol(hexB, NULL, 16);
-			}*/
 		}
 
 	}
