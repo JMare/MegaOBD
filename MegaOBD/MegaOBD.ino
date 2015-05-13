@@ -7,9 +7,9 @@ This is a partial rewrite commited to git on 5/2/15
 //library includes
 #include <LiquidCrystal.h>
 #include <Encoder.h>
-//#include <Timer.h> 
+#include <Timer.h> 
 #include <SoftwareSerial.h>
-//Timer t; //start timer
+Timer t; //start timer
 
 
 //menu setup
@@ -43,10 +43,10 @@ boolean obd_retries;
 
 //data calculation variables inc ring buffer
 
-char rxData[20];
+char rxData[50];
 long int hexAint;
 long int hexBint;
-char rxIndex = 0;
+int rxIndex = 0;
 int rpmstored = 0;
 int spdstored = 0;
 int tmpstored = 0;
@@ -105,17 +105,18 @@ void setup()
   	//int spdevent = t.every(200,getSPD);
   	//int tmpevent = t.every(2000,getTMP);
   	//int vltevent = t.every(2000,getVLT);
+  	int dataevent = t.every(1000,getdata);
 }
 
 long oldPosition  = 0;
 
 void loop()
 {
-	delay(50);
-	getRPM();
-	getSPD();
-	getTMP();
-	getVLT();
+	//getdata();
+	//getRPM();
+	//getSPD();
+	//getTMP();
+	//getVLT();
 
 	//delay(50);
 	// Poll the push button on the encoder
@@ -167,7 +168,7 @@ void loop()
     {
       abortloop("OBD ABORT - RESET");
     }
-   // t.update();
+   t.update();
 }
 
 void read_enc()
@@ -213,6 +214,13 @@ void read_enc()
 
 	}
 	//return(menu_pos);
+}
+
+void getdata(void)
+{
+	Serial.println("getdata");
+	OBD_read("010D050C3", 1);
+	Serial.println(rxData);
 }
 
 void getSPD(void)
@@ -267,17 +275,20 @@ void OBD_read(char *command, int bytes)
 		while ((btSerial.available()>0) && (!prompt))
 		{
 			c = btSerial.read();
-			if (/*(c != '>') && */(rxIndex<14) && (c != '\r') && (c != '\n') && (c != ' ')) //Keep these out of our buffer
+			if ((c != '>') && (c != '\r') && (c != '\n') && (c != ' ')) //Keep these out of our buffer
       		{
        			rxData[rxIndex++] = c; //Add whatever we receive to the buffer
       		}
-      		if (c == 62) prompt=true;
+      		if (c == 62) 
+      			{
+      				prompt=true;
+      			}
       	}
 
       	rxData[rxIndex++] = '\0';
       	Serial.println(rxData);
 
-      	if ((rxData[7]==command[2]) && (rxData[8]==command[3])){ //if first four chars after our command is 410C
+      	if (0 == 0/*(rxData[7]==command[2]) && (rxData[8]==command[3])*/){ //if first four chars match our command chars
 		valid=true;                                                                  //corr response
 		Serial.println("valid=true");
 		} 
@@ -289,7 +300,7 @@ void OBD_read(char *command, int bytes)
 		if (valid){
 			obd_retries = 0;
 
-			if (bytes == 1)
+			/*if (bytes == 1)
 			{
 				char hexA[3] = {rxData[9], rxData[10], '\0'};
    				hexAint = strtol(hexA, NULL, 16);
@@ -300,7 +311,7 @@ void OBD_read(char *command, int bytes)
 				hexAint = strtol(hexA, NULL, 16);
 				char hexB[3] = {rxData[11], rxData[12], '\0'};
 				hexBint = strtol(hexB, NULL, 16);
-			}
+			}*/
 		}
 
 	}

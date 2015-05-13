@@ -1,4 +1,4 @@
-/* Written By James Mare
+	/* Written By James Mare
 
 This is a fork of MegaOBD.ino which uses the same setup functions to establish a connection to the elm327
 This program allows a serial terminal interface with the ELM327
@@ -26,7 +26,7 @@ boolean btabort;
 boolean obd_retries;
 
 //Ringbuffer
-char rxData[20];
+char rxData[30];
 char rxIndex = 0;
 
 //Establish serial connection to the HC-05
@@ -86,17 +86,18 @@ void loop()
 		while ((btSerial.available()>0) && (!prompt))
 		{
 			c = btSerial.read();
-			if (/*(c != '>') && */(rxIndex<14) && (c != '\r') && (c != '\n') && (c != ' ')) //Keep these out of our buffer
+			if ((c != '>') && (rxIndex<14) && (c != 10) && (c != 13) && (c != ' ')) //Keep these out of our buffer
 	  		{
 	   			rxData[rxIndex++] = c; //Add whatever we receive to the buffer
 	  		}
 	  		if (c == 62) prompt=true; //if c=> then set prompt to true and exit loop
 	  	}
 
-	  	rxData[rxIndex++] = '\0'; //convert to string
+	  	//rxData[rxIndex++] = '\0'; //convert to string
 
-	  	Serial.println(rxData); //once data is collected print to serial terminal and go back to waiting for serial input
-  	}
+	  	Serial.print(rxData); //once data is collected print to serial terminal and go back to waiting for serial input
+                Serial.println();  	
+}
 
   while (obdabort == true)
     {
