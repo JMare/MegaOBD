@@ -7,7 +7,7 @@ This is a partial rewrite commited to git on 5/2/15
 //library includes
 #include <LiquidCrystal.h>
 #include <Encoder.h>
-#include <Timer.h> 
+#include "Timer.h" 
 #include <SoftwareSerial.h>
 Timer t; //start timer
 
@@ -105,7 +105,7 @@ void setup()
   	//int spdevent = t.every(200,getSPD);
   	//int tmpevent = t.every(2000,getTMP);
   	//int vltevent = t.every(2000,getVLT);
-  	int dataevent = t.every(1000,getdata);
+ 	t.every(1000,getdata);
 }
 
 long oldPosition  = 0;
