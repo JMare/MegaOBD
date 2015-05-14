@@ -5,7 +5,7 @@ This is a partial rewrite commited to git on 5/2/15
 //library includes
 #include <LiquidCrystal.h>
 #include <Encoder.h>
-#include <Timer.h> 
+#include "Timer.h"
 #include <SoftwareSerial.h>
 Timer t; //start timer
 
@@ -30,7 +30,7 @@ LiquidCrystal lcd(22, 24, 32, 30, 28, 26);
 #define CmdPin 52
 
 //Establish max retries for our functions
-#define OBD_CMD_RETRIES 3
+#define OBD_CMD_RETRIES 5
 #define BT_CMD_RETRIES 5
 
 
@@ -103,15 +103,17 @@ void setup()
   	//int spdevent = t.every(200,getSPD);
   	//int tmpevent = t.every(2000,getTMP);
   	//int vltevent = t.every(2000,getVLT);
-  	//int dataevent = t.every(100,getdata);
+  	int dataevent = t.every(100,getdata);
+  	int lcdevent = t.every(50,printlcd);
 }
 
 long oldPosition  = 0;
 
 void loop()
 {
-        delay(100);
-        getdata();
+	t.update();
+    //    delay(100);
+    //    getdata();
 	//getRPM();
 	//getSPD();
 	//getTMP();
@@ -124,6 +126,16 @@ void loop()
 	//poll the encoder and calculate the menu position
 	read_enc();
 
+  while (obdabort == true)
+    {
+      abortloop("OBD ABORT - RESET");
+    }
+   //t.update();
+}
+
+void printlcd()
+{
+
 	if (menu_pos != menu_pos_old)
 	{
 		lcd.clear();
@@ -135,6 +147,7 @@ void loop()
 
 			lcd.setCursor(0,0);
 			lcd.print("Speed:");
+			lcd.print("          ");
 			lcd.setCursor(0,1);
 			lcd.print(spdstored);
 			lcd.print("     ");
@@ -143,6 +156,7 @@ void loop()
 		case 2:
 			lcd.setCursor(0,0);
 			lcd.print("RPM:");
+			lcd.print("          ");
 			lcd.setCursor(0,1);
 			lcd.print(rpmstored);
 			lcd.print("     ");
@@ -150,6 +164,7 @@ void loop()
 		case 3:
 			lcd.setCursor(0,0);
 			lcd.print("Coolant Temp: ");
+			lcd.print("         ");
 			lcd.setCursor(0,1);
 			lcd.print(tmpstored);
 			lcd.print("    ");
@@ -157,17 +172,12 @@ void loop()
 		case 4:
 			lcd.setCursor(0,0);
 			lcd.print("Battery Voltage: ");
+			lcd.print("           ");
 			lcd.setCursor(0,1);
 			lcd.print(vltstored);
 			lcd.print("    ");
 			break;
-
 	}
-  while (obdabort == true)
-    {
-      abortloop("OBD ABORT - RESET");
-    }
-   t.update();
 }
 
 void read_enc()
@@ -217,23 +227,23 @@ void read_enc()
 
 void getdata(void)
 {
-	Serial.println("getdata");
+	//Serial.println("getdata");
 	OBD_read("010D050C3");
-	Serial.println(rxData);
+	//Serial.println(rxData);
 
 	char hexA[3] = {rxData[18], rxData[19], '\0'};
 	spdstored = strtol(hexA, NULL, 16);
 
-	//hexA[3] = {rxData[22], rxData[23], '\0'};
-        hexA[1] = rxData[22];
-        hexA[2] = rxData[23];
-        hexA[3] = '\0';
+	//hexA[] = {rxData[22], rxData[23], '\0'};
+    hexA[0] = rxData[22];
+    hexA[1] = rxData[23];
+    hexA[2] = '\0';
 	tmpstored = strtol(hexA, NULL, 16) - 40;
 
-	//hexA[3] = {rxData[28], rxData[29], '\0'};
-        hexA[1] = rxData[28];
-        hexA[2] = rxData[29];
-        hexA[3] = '\0';
+	//hexA[] = {rxData[28], rxData[29], '\0'};
+        hexA[0] = rxData[28];
+        hexA[1] = rxData[29];
+        hexA[2] = '\0';
 	char hexB[3] = {rxData[30], rxData[31], '\0'};
 	hexAint = strtol(hexA, NULL, 16);
 	hexBint = strtol(hexB, NULL, 16);
@@ -400,8 +410,12 @@ void sendATCommand(char *command)
 			{
 			Serial.println("OK Response received");
 			OK_flag=true;   //if response is OK then OK-flag set to true
+			delay(200);
 			}
+			else
+			{
 			delay(500);
+			}
 		}
 
 		if (retries>=BT_CMD_RETRIES) {                        //if bluetooth retries reached
@@ -427,7 +441,6 @@ void OBD_init()
 	Serial.println("Starting OBD Initilization");
 	obdabort = false;
 	send_OBD_cmd("ATZ");
-	delay(1000);
 	//send_OBD_cmd("ATSP0");
 
 	//send_OBD_cmd("0100");
@@ -437,7 +450,6 @@ void OBD_init()
 	//send_OBD_cmd("0140");
 	//delay(1000);
 	send_OBD_cmd("010C1");
-	delay(1000);
 }
 
 void send_OBD_cmd(char *obd_cmd)
@@ -463,11 +475,14 @@ void send_OBD_cmd(char *obd_cmd)
       while ((btSerial.available()>0) && (!prompt))
       {
         recvChar = btSerial.read();
-        if (recvChar == 62) prompt = true;
+        if (recvChar == 62) 
+        {
+        prompt = true;
         Serial.println("Matching response identified");
+    	}
       }
       retries = retries + 1;
-      delay(1000);
+      delay(100);
     }
     if (retries >= OBD_CMD_RETRIES)
     {
