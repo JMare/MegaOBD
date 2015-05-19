@@ -4,7 +4,7 @@ This will eventually be integrated into MegaOBD.ino
 
 */
 
-#define NEOPIN 6
+#define NEOPIN 10
 
 #include <Adafruit_NeoPixel.h>
 
@@ -18,9 +18,9 @@ int barval;
 
 
 //Color variables for direct use with strips
-uint32_t color1; 
-uint32_t color2; 
-uint32_t color3; 
+uint32_t color1 = strip.Color(79,105,224);
+uint32_t color2 = strip.Color(235,169,16);
+uint32_t color3 = strip.Color(255,0,0);
 uint32_t flclr1; 
 uint32_t flclr2; 
 
@@ -38,15 +38,22 @@ void setup()
 	strip.show();
 
 	activation_val = 3000;
-	shift_val = 5000;
+	shift_val = 5500;
+
+	strip.setBrightness(10);
 
 }
 
 void loop()
 {
 
-	barval =
-	writebar();
+
+	for(int i=1000;i<8000;i++){
+		Serial.println(barval);
+		barval = i;
+		writebar();
+
+	}
 }
 
 void writebar()
@@ -59,7 +66,7 @@ void writebar()
 	}
 	else{
 		strip.setPixelColor(7,strip.Color(0, 0, 0));
-		strip.setPixelColor(7,strip.Color(0, 0, 0));
+		strip.setPixelColor(8,strip.Color(0, 0, 0));
 	}
 
 	if ((barval-activation_val) > (segment_int)) { 
