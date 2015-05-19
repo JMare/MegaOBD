@@ -7,7 +7,9 @@ This is a partial rewrite commited to git on 5/2/15
 #include <Encoder.h>
 #include "Timer.h"
 #include <SoftwareSerial.h>
+#include <Adafruit_NeoPixel.h>
 Timer t; //start timer
+
 
 
 //menu setup
@@ -18,6 +20,26 @@ int menu_var = 0;
 int menu_pos_old = 1;
 int menu_pos = 1;
 int menu_change = 0;
+
+//bargraph variables
+int activation_val; 
+int shift_val; 
+int segment_int; 
+
+int barval;
+
+#define NEOPIN 10
+
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(16, NEOPIN, NEO_GRB + NEO_KHZ800); 
+
+
+//Color variables for direct use with strips
+uint32_t color1 = strip.Color(79,105,224);
+uint32_t color2 = strip.Color(235,169,16);
+uint32_t color3 = strip.Color(255,0,0);
+uint32_t flclr1; 
+uint32_t flclr2; 
+
 
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(22, 24, 32, 30, 28, 26);
@@ -55,6 +77,13 @@ SoftwareSerial btSerial(RxD, TxD);
 
 void setup()
 {
+	strip.begin();
+	strip.show();
+
+	activation_val = 3000;
+	shift_val = 5500;
+
+	strip.setBrightness(10);
 	  // set up the LCD's number of columns and rows:
   	lcd.begin(16, 2);
 
@@ -112,14 +141,10 @@ long oldPosition  = 0;
 void loop()
 {
 	t.update();
-    //    delay(100);
-    //    getdata();
-	//getRPM();
-	//getSPD();
-	//getTMP();
-	//getVLT();
 
-	//delay(50);
+	barval = rpmstored;
+	writebar();
+	
 	// Poll the push button on the encoder
 	ENC_PUSH_STATE = digitalRead(ENC_PUSH_PIN);
 
@@ -130,7 +155,91 @@ void loop()
     {
       abortloop("OBD ABORT - RESET");
     }
-   //t.update();
+}
+
+void writebar()
+{
+	segment_int = (shift_val - activation_val) / 8;
+
+	if (barval > activation_val){
+		strip.setPixelColor(7, color1);
+		strip.setPixelColor(8, color1);
+	}
+	else{
+		strip.setPixelColor(7,strip.Color(0, 0, 0));
+		strip.setPixelColor(8,strip.Color(0, 0, 0));
+	}
+
+	if ((barval-activation_val) > (segment_int)) { 
+		strip.setPixelColor(6, color1); 
+		strip.setPixelColor(9, color1); 
+	} 
+	else { 
+		strip.setPixelColor(6, strip.Color(0, 0, 0)); 
+		strip.setPixelColor(9, strip.Color(0, 0, 0)); 
+	} 
+
+
+	if ((barval-activation_val) > (segment_int * 2)) { 
+		strip.setPixelColor(5, color1); 
+		strip.setPixelColor(10, color1); 
+	} 
+	else { 
+		strip.setPixelColor(5, strip.Color(0, 0, 0)); 
+		strip.setPixelColor(10, strip.Color(0, 0, 0)); 
+	} 
+
+	if ((barval-activation_val) > (segment_int * 3)) { 
+		strip.setPixelColor(4, color1); 
+		strip.setPixelColor(11, color1); 
+	} 
+	else { 
+		strip.setPixelColor(4, strip.Color(0, 0, 0)); 
+		strip.setPixelColor(11, strip.Color(0, 0, 0)); 
+	} 
+
+
+	if ((barval-activation_val) > (segment_int * 4)) { 
+		strip.setPixelColor(3, color2); 
+		strip.setPixelColor(12, color2); 
+	} 
+	else { 
+		strip.setPixelColor(3, strip.Color(0, 0, 0)); 
+		strip.setPixelColor(12, strip.Color(0, 0, 0)); 
+	} 
+
+
+	if ((barval-activation_val) > (segment_int * 5)) { 
+		strip.setPixelColor(2, color2); 
+		strip.setPixelColor(13, color2); 
+	} 
+	else { 
+		strip.setPixelColor(2, strip.Color(0, 0, 0)); 
+		strip.setPixelColor(13, strip.Color(0, 0, 0)); 
+	} 
+
+
+	if ((barval-activation_val) > (segment_int * 6)) { 
+		strip.setPixelColor(1, color3); 
+		strip.setPixelColor(14, color3); 
+	} 
+	else { 
+		strip.setPixelColor(1, strip.Color(0, 0, 0)); 
+		strip.setPixelColor(14, strip.Color(0, 0, 0)); 
+	} 
+
+
+
+	if ((barval-activation_val) > (segment_int * 7)) { 
+		strip.setPixelColor(0, color3); 
+		strip.setPixelColor(15, color3); 
+	} 
+	else { 
+		strip.setPixelColor(0, strip.Color(0, 0, 0)); 
+		strip.setPixelColor(15, strip.Color(0, 0, 0)); 
+	} 
+
+	strip.show();
 }
 
 void printlcd()
