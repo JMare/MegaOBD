@@ -92,8 +92,8 @@ void setup()
     hud.shutdown(0, false); //turn on 7seg display
     hud.setIntensity(0, 15); // 15 = brightest
 
-	activation_val = 3000; //set constants for rpm display
-	shift_val = 5500;	
+	activation_val = 1500; //set constants for rpm display
+	shift_val = 4000;	
 
 	// set up the LCD's number of columns and rows:
   	lcd.begin(16, 2);
@@ -143,7 +143,7 @@ void setup()
 
   	ascend_strip(); //flash strip to indicate end of setup
 
-  	int dataevent = t.every(200,getdata);
+  	int dataevent = t.every(100,getdata);
   	//int lcdevent = t.every(50,printlcd);
 }
 
@@ -398,6 +398,7 @@ void getdata(void)
 
 		if ((calcdata[6]=='0') && (calcdata[7]=='5'))
 		{
+  Serial.println("tmp match");
 	    hexA[0] = calcdata[8];
 	    hexA[1] = calcdata[9];
 	    hexA[2] = '\0';
@@ -406,10 +407,11 @@ void getdata(void)
 
 		if ((calcdata[10]=='0') && (calcdata[11]=='C'))
 		{
-	    hexA[0] = calcdata[12];
-        hexA[1] = calcdata[13];
+                Serial.println("rpm match");
+	    hexA[0] = calcdata[13];
+        hexA[1] = calcdata[14];
         hexA[2] = '\0';
-		char hexB[3] = {calcdata[14], rxData[15], '\0'};
+		char hexB[3] = {calcdata[15], rxData[16], '\0'};
 		hexAint = strtol(hexA, NULL, 16);
 		hexBint = strtol(hexB, NULL, 16);
 		rpmstored = ((hexAint * 256) + hexBint) / 4;
