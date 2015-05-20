@@ -34,7 +34,7 @@ int activation_val; //value at which the first led will light
 int shift_val;  //value at which the whole display will be lit
 int segment_int; 
 int barval;  //value used to display
-#define NEOPIN 10
+#define NEOPIN 40
 
 //initialize neopixel library
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(16, NEOPIN, NEO_GRB + NEO_KHZ800); 
@@ -84,7 +84,7 @@ void setup()
 	strip.begin();
 	strip.show();
 
-	strip.setBrightness(10);
+	strip.setBrightness(255);
 
 	ascend_strip(); //flash the bargraph to indicate power on
 
@@ -142,7 +142,7 @@ void setup()
 
   	ascend_strip(); //flash strip to indicate end of setup
 
-  	int dataevent = t.every(100,getdata);
+  	int dataevent = t.every(200,getdata);
   	//int lcdevent = t.every(50,printlcd);
 }
 
@@ -389,19 +389,19 @@ void getdata(void)
 {
 	//Serial.println("getdata");
 	OBD_read("010D050C3");
-	//Serial.println(rxData);
+	Serial.println(rxData);
 
 	if(valid == true){
-		char hexA[3] = {rxData[18], rxData[19], '\0'};
+		char hexA[3] = {rxData[17], rxData[18], '\0'};
 		spdstored = strtol(hexA, NULL, 16);
-	    hexA[0] = rxData[22];
-	    hexA[1] = rxData[23];
+	    hexA[0] = rxData[21];
+	    hexA[1] = rxData[22];
 	    hexA[2] = '\0';
 		tmpstored = strtol(hexA, NULL, 16) - 40;
-	    hexA[0] = rxData[28];
-        hexA[1] = rxData[29];
+	    hexA[0] = rxData[26];
+        hexA[1] = rxData[27];
         hexA[2] = '\0';
-		char hexB[3] = {rxData[30], rxData[31], '\0'};
+		char hexB[3] = {rxData[28], rxData[29], '\0'};
 		hexAint = strtol(hexA, NULL, 16);
 		hexBint = strtol(hexB, NULL, 16);
 		rpmstored = ((hexAint * 256) + hexBint) / 4;
@@ -430,7 +430,7 @@ void OBD_read(char *command)
 		while ((btSerial.available()>0) && (!prompt))
 		{
 			c = btSerial.read();
-			if ((c != '>') && (c != '\r') && (c != '\n') && (c != ' ')) //Keep these out of our buffer
+			if ((c != '>') && (c != ':') && (c != '\r') && (c != '\n') && (c != ' ')) //Keep these out of our buffer
       		{
        			rxData[rxIndex++] = c; //Add whatever we receive to the buffer
       		}
@@ -443,7 +443,7 @@ void OBD_read(char *command)
       	rxData[rxIndex++] = '\0';
       	//Serial.println(rxData);
 
-      	if ((rxData[7]==command[2]) && (rxData[8]==command[3])){ //if first four chars match our command chars
+      	if ((rxData[13]== '4') && (rxData[14]== '1')){ //if first four chars match our command chars
 		valid=true;                                                                  //corr response
 		Serial.println("valid=true");
 		} 
@@ -465,6 +465,7 @@ void OBD_read(char *command)
 			obdabort = true;
 		}
 	}
+    btSerial.flush();
 }
 
 void setupBTcon()
