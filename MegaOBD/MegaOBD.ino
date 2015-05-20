@@ -8,9 +8,17 @@ This is a partial rewrite commited to git on 5/2/15
 #include "Timer.h"
 #include <SoftwareSerial.h>
 #include <Adafruit_NeoPixel.h>
-Timer t; //start timer
+#include <LedControl.h>
 
+Timer t; //start timer for getdata()
 
+//7Seg pins
+int hud_din = 12;
+int hud_cs = 11;
+int hud_clk = 10;
+
+//initialise ledcontrol library 
+LedControl hud = LedControl(hud_din, hud_clk, hud_cs, 1);
 
 //menu setup
 Encoder myEnc(18, 19); //start the encoder library with the interupt pins
@@ -22,14 +30,13 @@ int menu_pos = 1;
 int menu_change = 0;
 
 //bargraph variables
-int activation_val; 
-int shift_val; 
+int activation_val; //value at which the first led will light
+int shift_val;  //value at which the whole display will be lit
 int segment_int; 
-
-int barval;
-
+int barval;  //value used to display
 #define NEOPIN 10
 
+//initialize neopixel library
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(16, NEOPIN, NEO_GRB + NEO_KHZ800); 
 
 
@@ -37,13 +44,9 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(16, NEOPIN, NEO_GRB + NEO_KHZ800);
 uint32_t color1 = strip.Color(79,105,224);
 uint32_t color2 = strip.Color(235,169,16);
 uint32_t color3 = strip.Color(255,0,0);
-uint32_t flclr1; 
-uint32_t flclr2; 
 
-
-// initialize the library with the numbers of the interface pins
+// initialize the lcd library with the numbers of the interface pins
 LiquidCrystal lcd(22, 24, 32, 30, 28, 26);
-
 
 
 //Define the pins that connect to the HC-05
@@ -51,19 +54,20 @@ LiquidCrystal lcd(22, 24, 32, 30, 28, 26);
 #define TxD 51
 #define CmdPin 52
 
-//Establish max retries for our functions
+//Establish max retries for our data functions
 #define OBD_CMD_RETRIES 5
 #define BT_CMD_RETRIES 5
 
 
 //abort flags and counters
 boolean obdabort;
+boolean valid;
 boolean btabort;
 boolean obd_retries;
 
 //data calculation variables inc ring buffer
 
-char rxData[50];
+char rxData[50]; //big buffer for multiple PIDs
 long int hexAint;
 long int hexBint;
 int rxIndex = 0;
@@ -80,15 +84,23 @@ void setup()
 	strip.begin();
 	strip.show();
 
-	activation_val = 3000;
-	shift_val = 5500;
-
 	strip.setBrightness(10);
-	  // set up the LCD's number of columns and rows:
+
+	ascend_strip(); //flash the bargraph to indicate power on
+
+    hud.shutdown(0, false); //turn on 7seg display
+    hud.setIntensity(0, 15); // 15 = brightest
+
+	activation_val = 3000; //set constants for rpm display
+	shift_val = 5500;	
+
+	// set up the LCD's number of columns and rows:
   	lcd.begin(16, 2);
 
-  //Set the encoder push button input
+  	//Set the encoder push button input
   	pinMode(ENC_PUSH_PIN, INPUT);
+
+  	//set pinmodes for hc-05
 	pinMode(RxD, INPUT);
    	pinMode(TxD, OUTPUT);
    	pinMode(CmdPin, OUTPUT);
@@ -128,12 +140,10 @@ void setup()
   	Serial.println("setup() complete"); 
   	lcd.clear();
 
-  	//int rpmevent = t.every(50,getRPM);
-  	//int spdevent = t.every(200,getSPD);
-  	//int tmpevent = t.every(2000,getTMP);
-  	//int vltevent = t.every(2000,getVLT);
+  	ascend_strip(); //flash strip to indicate end of setup
+
   	int dataevent = t.every(100,getdata);
-  	int lcdevent = t.every(50,printlcd);
+  	//int lcdevent = t.every(50,printlcd);
 }
 
 long oldPosition  = 0;
@@ -141,9 +151,10 @@ long oldPosition  = 0;
 void loop()
 {
 	t.update();
-
+	printlcd();
 	barval = rpmstored;
 	writebar();
+	printNumber(spdstored);
 	
 	// Poll the push button on the encoder
 	ENC_PUSH_STATE = digitalRead(ENC_PUSH_PIN);
@@ -151,10 +162,50 @@ void loop()
 	//poll the encoder and calculate the menu position
 	read_enc();
 
-  while (obdabort == true)
+  	while (obdabort == true)
     {
       abortloop("OBD ABORT - RESET");
     }
+}
+
+void ascend_strip(){
+		//Ascend strip 
+	for (int i=0; i<9; i++){ 
+	strip.setPixelColor(i, strip.Color(0, 0, 25)); 
+	strip.setPixelColor(16-i, strip.Color(0, 0, 25)); 
+	strip.show(); 
+	delay(35); 
+	} 
+	// Descend Strip 
+	for (int i=0; i<9; i++){ 
+	strip.setPixelColor(i, strip.Color(0, 0, 0)); 
+	strip.setPixelColor(16-i, strip.Color(0, 0, 0)); 
+	strip.show(); 
+	delay(35); 
+	} 
+}
+
+void printNumber(int v) {
+    int ones;
+    int tens;
+    int hundreds;
+    boolean negative;	
+
+    if(v < -999 || v > 999) 
+       return;
+    if(v<0) {
+        negative=true;
+        v=v*-1;
+    }
+    ones=v%10;
+    v=v/10;
+    tens=v%10;
+    v=v/10;
+    hundreds=v;			
+    //Now print the number digit by digit
+    hud.setDigit(0,0,(byte)hundreds,false);
+    hud.setDigit(0,1,(byte)tens,false);
+    hud.setDigit(0,2,(byte)ones,false);
 }
 
 void writebar()
@@ -340,24 +391,21 @@ void getdata(void)
 	OBD_read("010D050C3");
 	//Serial.println(rxData);
 
-	char hexA[3] = {rxData[18], rxData[19], '\0'};
-	spdstored = strtol(hexA, NULL, 16);
-
-	//hexA[] = {rxData[22], rxData[23], '\0'};
-    hexA[0] = rxData[22];
-    hexA[1] = rxData[23];
-    hexA[2] = '\0';
-	tmpstored = strtol(hexA, NULL, 16) - 40;
-
-	//hexA[] = {rxData[28], rxData[29], '\0'};
-        hexA[0] = rxData[28];
+	if(valid == true){
+		char hexA[3] = {rxData[18], rxData[19], '\0'};
+		spdstored = strtol(hexA, NULL, 16);
+	    hexA[0] = rxData[22];
+	    hexA[1] = rxData[23];
+	    hexA[2] = '\0';
+		tmpstored = strtol(hexA, NULL, 16) - 40;
+	    hexA[0] = rxData[28];
         hexA[1] = rxData[29];
         hexA[2] = '\0';
-	char hexB[3] = {rxData[30], rxData[31], '\0'};
-	hexAint = strtol(hexA, NULL, 16);
-	hexBint = strtol(hexB, NULL, 16);
-	rpmstored = ((hexAint * 256) + hexBint) / 4;
-
+		char hexB[3] = {rxData[30], rxData[31], '\0'};
+		hexAint = strtol(hexA, NULL, 16);
+		hexBint = strtol(hexB, NULL, 16);
+		rpmstored = ((hexAint * 256) + hexBint) / 4;
+	}
 	//Serial.println("getvlt");
 	//OBD_read("AT RV");
 	//Serial.println(rxData);
@@ -365,7 +413,7 @@ void getdata(void)
 
 void OBD_read(char *command)
 {
-	boolean prompt,valid;
+	boolean prompt;
 	char c;
 	memset(&rxData[0], 0, sizeof(rxData));
 
@@ -395,13 +443,13 @@ void OBD_read(char *command)
       	rxData[rxIndex++] = '\0';
       	//Serial.println(rxData);
 
-      	if (0 == 0/*(rxData[7]==command[2]) && (rxData[8]==command[3])*/){ //if first four chars match our command chars
+      	if ((rxData[7]==command[2]) && (rxData[8]==command[3])){ //if first four chars match our command chars
 		valid=true;                                                                  //corr response
-		//Serial.println("valid=true");
+		Serial.println("valid=true");
 		} 
 		else {
 		valid=false;  
-		//Serial.println("valid=false");                                                               //else we dont
+		Serial.println("valid=false");                                                               //else we dont
 		}
 
 		if (valid){
