@@ -68,6 +68,7 @@ boolean obd_retries;
 //data calculation variables inc ring buffer
 
 char rxData[50]; //big buffer for multiple PIDs
+char * calcdata;
 long int hexAint;
 long int hexBint;
 int rxIndex = 0;
@@ -389,26 +390,31 @@ void getdata(void)
 {
 	//Serial.println("getdata");
 	OBD_read("010D050C3");
-	Serial.println(rxData);
 
 	if(valid == true){
-		char hexA[3] = {rxData[17], rxData[18], '\0'};
+		Serial.println(calcdata);
+		char hexA[3] = {calcdata[4], calcdata[5], '\0'};
 		spdstored = strtol(hexA, NULL, 16);
-	    hexA[0] = rxData[21];
-	    hexA[1] = rxData[22];
+
+		if ((calcdata[6]=='0') && (calcdata[7]=='5'))
+		{
+	    hexA[0] = calcdata[8];
+	    hexA[1] = calcdata[9];
 	    hexA[2] = '\0';
 		tmpstored = strtol(hexA, NULL, 16) - 40;
-	    hexA[0] = rxData[26];
-        hexA[1] = rxData[27];
+		}
+
+		if ((calcdata[10]=='0') && (calcdata[11]=='C'))
+		{
+	    hexA[0] = calcdata[12];
+        hexA[1] = calcdata[13];
         hexA[2] = '\0';
-		char hexB[3] = {rxData[28], rxData[29], '\0'};
+		char hexB[3] = {calcdata[14], rxData[15], '\0'};
 		hexAint = strtol(hexA, NULL, 16);
 		hexBint = strtol(hexB, NULL, 16);
 		rpmstored = ((hexAint * 256) + hexBint) / 4;
+		}
 	}
-	//Serial.println("getvlt");
-	//OBD_read("AT RV");
-	//Serial.println(rxData);
 }
 
 void OBD_read(char *command)
@@ -421,7 +427,6 @@ void OBD_read(char *command)
 		valid = false;
 		prompt = false;
 		btSerial.print(command);
-		//Serial.println(command);
 		btSerial.print("\r");
 		while (btSerial.available() <= 0);
 
@@ -441,9 +446,9 @@ void OBD_read(char *command)
       	}
 
       	rxData[rxIndex++] = '\0';
-      	//Serial.println(rxData);
+      	calcdata = strchr(rxData, '4');
 
-      	if ((rxData[13]== '4') && (rxData[14]== '1')){ //if first four chars match our command chars
+      	if ((calcdata != NULL) && (calcdata[0]== '4') && (calcdata[1]== '1') && (calcdata[2]== '0') && (calcdata[3]== 'D')){ //if first four chars match our command chars
 		valid=true;                                                                  //corr response
 		Serial.println("valid=true");
 		} 
@@ -465,7 +470,6 @@ void OBD_read(char *command)
 			obdabort = true;
 		}
 	}
-    btSerial.flush();
 }
 
 void setupBTcon()
