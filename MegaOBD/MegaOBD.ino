@@ -18,10 +18,10 @@ int hud_cs = 11;
 int hud_clk = 10;
 
 //initialise ledcontrol library 
-LedControl hud = LedControl(hud_din, hud_clk, hud_cs, 1);
+//LedControl hud = LedControl(hud_din, hud_clk, hud_cs, 1);
 
 //menu setup
-Encoder myEnc(18, 19); //start the encoder library with the interupt pins
+Encoder myEnc(1, 2); //start the encoder library with the interupt pins
 const int ENC_PUSH_PIN = 27; //push button pin
 int ENC_PUSH_STATE = 0; 
 int menu_var = 0;
@@ -34,7 +34,7 @@ int activation_val; //value at which the first led will light
 int shift_val;  //value at which the whole display will be lit
 int segment_int; 
 int barval;  //value used to display
-#define NEOPIN 40
+#define NEOPIN 17
 
 //initialize neopixel library
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(16, NEOPIN, NEO_GRB + NEO_KHZ800); 
@@ -46,13 +46,13 @@ uint32_t color2 = strip.Color(235,169,16);
 uint32_t color3 = strip.Color(255,0,0);
 
 // initialize the lcd library with the numbers of the interface pins
-LiquidCrystal lcd(22, 24, 32, 30, 28, 26);
-
+//LiquidCrystal lcd(27, 25, 28, 29, 26, 24);
+ 	LiquidCrystal lcd(27, 25, 24, 26, 29, 28);
 
 //Define the pins that connect to the HC-05
-#define RxD 50
-#define TxD 51
-#define CmdPin 52
+#define RxD 10
+#define TxD 11
+#define CmdPin 12
 
 //Establish max retries for our data functions
 #define OBD_CMD_RETRIES 5
@@ -89,8 +89,8 @@ void setup()
 
 	ascend_strip(); //flash the bargraph to indicate power on
 
-    hud.shutdown(0, false); //turn on 7seg display
-    hud.setIntensity(0, 15); // 15 = brightest
+   // hud.shutdown(0, false); //turn on 7seg display
+    //hud.setIntensity(0, 15); // 15 = brightest
 
 	activation_val = 1500; //set constants for rpm display
 	shift_val = 4000;	
@@ -99,7 +99,7 @@ void setup()
   	lcd.begin(16, 2);
 
   	//Set the encoder push button input
-  	pinMode(ENC_PUSH_PIN, INPUT);
+  	//pinMode(ENC_PUSH_PIN, INPUT);
 
   	//set pinmodes for hc-05
 	pinMode(RxD, INPUT);
@@ -108,7 +108,7 @@ void setup()
 
    	//Establish connection to computer
    	Serial.begin(38400);
-   	Serial.println("Serial connected");
+   //	Serial.println("Serial connected");
 
    	lcd.clear();
    	lcd.setCursor(0,0);
@@ -155,7 +155,7 @@ void loop()
 	printlcd();
 	barval = rpmstored;
 	writebar();
-	printNumber(spdstored);
+	//printNumber(spdstored);
 	
 	// Poll the push button on the encoder
 	ENC_PUSH_STATE = digitalRead(ENC_PUSH_PIN);
@@ -186,7 +186,7 @@ void ascend_strip(){
 	} 
 }
 
-void printNumber(int v) {
+/*void printNumber(int v) {
     int ones;
     int tens;
     int hundreds;
@@ -207,7 +207,7 @@ void printNumber(int v) {
     hud.setDigit(0,0,(byte)hundreds,false);
     hud.setDigit(0,1,(byte)tens,false);
     hud.setDigit(0,2,(byte)ones,false);
-}
+}*/
 
 void writebar()
 {
@@ -655,3 +655,10 @@ void send_OBD_cmd(char *obd_cmd)
     }
   }
 }
+
+
+
+
+
+
+
