@@ -1,5 +1,5 @@
 /* Written By James Mare
-This is a partial rewrite commited to git on 5/2/15
+This is a partial rewrite first commited to git on 5/2/15
 */
 
 //library includes
@@ -186,6 +186,7 @@ void ascend_strip(){
 	} 
 }
 
+//This is to print to the seven seg, needs to be reenabled for HUD
 /*void printNumber(int v) {
     int ones;
     int tens;
@@ -398,11 +399,11 @@ void getdata(void)
 
 		if ((calcdata[6]=='0') && (calcdata[7]=='5'))
 		{
-  Serial.println("tmp match");
-	    hexA[0] = calcdata[8];
-	    hexA[1] = calcdata[9];
-	    hexA[2] = '\0';
-		tmpstored = strtol(hexA, NULL, 16) - 40;
+ 			Serial.println("tmp match");
+	   		hexA[0] = calcdata[8];
+	   		hexA[1] = calcdata[9];
+	   		hexA[2] = '\0';
+			tmpstored = strtol(hexA, NULL, 16) - 40;
 		}
 
 		if ((calcdata[10]=='0') && (calcdata[11]=='C'))
@@ -605,14 +606,6 @@ void OBD_init()
 	Serial.println("Starting OBD Initilization");
 	obdabort = false;
 	send_OBD_cmd("ATZ");
-	//send_OBD_cmd("ATSP0");
-
-	//send_OBD_cmd("0100");
-	//delay(1000);
-	//send_OBD_cmd("0120");
-	//delay(1000);
-	//send_OBD_cmd("0140");
-	//delay(1000);
 	send_OBD_cmd("010C1");
 }
 
@@ -655,10 +648,4 @@ void send_OBD_cmd(char *obd_cmd)
     }
   }
 }
-
-
-
-
-
-
 
